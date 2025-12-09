@@ -1,0 +1,38 @@
+unit UIPedidoVendaService;
+
+interface
+
+uses
+  System.Classes,
+  System.SysUtils,
+  System.Generics.Collections,
+  UPedidoVenda,
+  UCliente,
+  UProduto;
+
+type
+  IPedidoVendaService = interface
+ ['{80FD643E-E19C-4C2A-82E5-67A98F91DE02}']
+
+    procedure CalcularTotalPedido(APedido: TPedido);
+    procedure AdicionarItem(APedido: TPedido; AProduto: TProduto; AQuantidade: Extended);
+
+    function BuscarCliente(const ACodigo: Integer): TCliente;
+    function BuscarProduto(const ACodigo: Integer): TProduto;
+
+    procedure Salvar(APedido: TPedido);
+    procedure SalvarNovoCliente(ACliente: TCliente);
+    procedure SalvarNovoProduto(AProduto: TProduto);
+
+    procedure AtualizarCliente(ACliente: TCliente);
+    procedure AtualizarProduto(AProduto: TProduto);
+
+    procedure ExcluirCliente(const ACodigo: Integer);
+    procedure ExcluirProduto(const ACodigo: Integer);
+
+    function CarregarUFs: TStringList;
+    function CarregarCidadesPorUF(AUF: string): TStringList;
+ end;
+
+implementation
+end.

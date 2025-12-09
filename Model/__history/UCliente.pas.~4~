@@ -1,0 +1,36 @@
+unit UCliente;
+
+interface
+
+uses
+  System.SysUtils;
+
+type
+  TCliente = class
+  private
+    FCodigo: Integer;
+    FNome: string;
+    FCidade: string;
+    FUF: string;
+  public
+    procedure Assign(Source: TCliente);
+
+    property Codigo: Integer read FCodigo write FCodigo;
+    property Nome: string read FNome write FNome;
+    property Cidade: string read FCidade write FCidade;
+    property UF: string read FUF write FUF;
+  end;
+
+implementation
+
+procedure TCliente.Assign(Source: TCliente);
+begin
+  if Source = nil then Exit;
+  FCodigo := Source.Codigo;
+  FNome   := Source.Nome;
+  FCidade := Source.Cidade;
+  FUF     := Source.UF;
+end;
+
+end.
+

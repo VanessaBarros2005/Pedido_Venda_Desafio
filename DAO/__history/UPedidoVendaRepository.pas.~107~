@@ -1,0 +1,438 @@
+unit UPedidoVendaRepository;
+
+interface
+
+uses
+  System.Classes,
+  Data.DB,
+  FireDAC.Comp.Client,
+  FireDAC.Stan.Param,
+  System.SysUtils,
+
+  UConstantes,
+  UPedidoVenda,
+  UCliente,
+  UProduto,
+  UIPedidoVendaRepository;
+
+type
+  TPedidoVendaRepository = class(TInterfacedObject, IPedidoVendaRepository)
+  private
+    FConnection: TFDConnection;
+    function GetQuery: TFDQuery;
+    procedure ReleaseQuery(var AQuery: TFDQuery);
+
+    procedure IniciarTransacao;
+    procedure ConfirmarTransacao;
+    procedure DesfazerTransacao;
+    function  ObterProximoNumeroPedido: Integer;
+    function  PedidoExiste(ACodigo : Integer) :  Boolean;
+
+  public
+    constructor Create(AConnection: TFDConnection);
+    destructor Destroy; override;
+
+    function BuscarClientePorCodigo(const ACodigo: Integer): TCliente;
+    function BuscarProdutoPorCodigo(const ACodigo: Integer): TProduto;
+
+    procedure SalvarPedido(APedido: TPedido);
+    procedure SalvarNovoCliente(ACliente: TCliente);
+    procedure SalvarNovoProduto(AProduto: TProduto);
+
+    procedure AtualizarCliente(ACliente: TCliente);
+    procedure AtualizarProduto(AProduto: TProduto);
+
+    procedure ExcluirCliente(const ACodigo: Integer);
+    procedure ExcluirProduto(const ACodigo: Integer);
+
+    function CarregarUFs: TStringList;
+    function CarregarCidadesPorUF(AUF: string): TStringList;
+  end;
+
+implementation
+
+{ TPedidoVendaRepository }
+
+constructor TPedidoVendaRepository.Create(AConnection: TFDConnection);
+begin
+  FConnection := AConnection;
+end;
+
+destructor TPedidoVendaRepository.Destroy;
+begin
+  inherited;
+end;
+
+procedure TPedidoVendaRepository.ExcluirCliente(const ACodigo: Integer);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'DELETE FROM CLIENTE WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+    LQuery.ExecSQL;
+  finally
+    ReleaseQuery(LQuery);
+  end;
+end;
+
+procedure TPedidoVendaRepository.ExcluirProduto(const ACodigo: Integer);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'DELETE FROM PRODUTO WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+    LQuery.ExecSQL;
+  finally
+    ReleaseQuery(LQuery);
+  end;
+end;
+
+function TPedidoVendaRepository.GetQuery: TFDQuery;
+begin
+  Result := TFDQuery.Create(nil);
+  Result.Connection := FConnection;
+
+  if (FConnection = nil) then
+    raise Exception.Create('Conexão não atribuída no Repository.');
+
+  if (not FConnection.Connected) then
+    raise Exception.Create('Conexão não está ativa.');
+end;
+
+procedure TPedidoVendaRepository.ReleaseQuery(var AQuery: TFDQuery);
+begin
+  if Assigned(AQuery) then
+  begin
+    AQuery.Close;
+    FreeAndNil(AQuery);
+  end;
+end;
+
+procedure TPedidoVendaRepository.IniciarTransacao;
+begin
+  FConnection.StartTransaction;
+end;
+
+function TPedidoVendaRepository.CarregarCidadesPorUF(AUF: string): TStringList;
+var
+  LQuery: TFDQuery;
+begin
+  Result := TStringList.Create;
+
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'SELECT NOME FROM CIDADE WHERE UF = :UF ORDER BY NOME';
+    LQuery.ParamByName('UF').AsString := AUF;
+    LQuery.Open;
+
+    while not LQuery.Eof do
+    begin
+      Result.Add(Trim(LQuery.FieldByName('NOME').AsString));
+      LQuery.Next;
+    end;
+
+  finally
+    LQuery.Free;
+  end;
+end;
+
+function TPedidoVendaRepository.CarregarUFs: TStringList;
+var
+  LQuery: TFDQuery;
+begin
+  Result := TStringList.Create;
+
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'SELECT UF FROM ESTADO ORDER BY UF';
+    LQuery.Open;
+
+    while not LQuery.Eof do
+    begin
+      Result.Add(Trim(LQuery.FieldByName('UF').AsString));
+      LQuery.Next;
+    end;
+
+  finally
+    LQuery.Free;
+  end;
+end;
+
+procedure TPedidoVendaRepository.ConfirmarTransacao;
+begin
+  FConnection.Commit;
+end;
+
+procedure TPedidoVendaRepository.DesfazerTransacao;
+begin
+  FConnection.Rollback;
+end;
+
+function TPedidoVendaRepository.ObterProximoNumeroPedido: Integer;
+begin
+  Result := ZERO_VALUE;
+end;
+
+function TPedidoVendaRepository.PedidoExiste(ACodigo: Integer): Boolean;
+var
+  LQuery: TFDQuery;
+begin
+  Result := False;
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'SELECT 1 FROM PEDIDOVENDA WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+    LQuery.Open;
+    Result := not LQuery.Eof;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+procedure TPedidoVendaRepository.AtualizarCliente(ACliente: TCliente);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text :=  'UPDATE CLIENTE SET NOME = :NOME, UF = :UF,'+
+                        'CIDADE = :CIDADE ' +
+                        'WHERE CODIGO = :CODIGO';
+
+    LQuery.ParamByName('NOME').AsString := ACliente.Nome;
+    LQuery.ParamByName('UF').AsString := ACliente.UF;
+    LQuery.ParamByName('CIDADE').AsString := ACliente.Cidade;
+    LQuery.ParamByName('CODIGO').AsInteger := ACliente.Codigo;
+    LQuery.ExecSQL;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+procedure TPedidoVendaRepository.AtualizarProduto(AProduto: TProduto);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'UPDATE PRODUTO SET DESCRICAO = :DESCRICAO, '+
+                       'PRECOVENDA = :PRECOVENDA ' +
+                       'WHERE CODIGO = :CODIGO';
+
+    LQuery.ParamByName('DESCRICAO').AsString := AProduto.Descricao;
+    LQuery.ParamByName('PRECOVENDA').AsCurrency := AProduto.PrecoVenda;
+    LQuery.ParamByName('CODIGO').AsInteger := AProduto.Codigo;
+    LQuery.ExecSQL;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+function TPedidoVendaRepository.BuscarClientePorCodigo(const ACodigo: Integer): TCliente;
+var
+  LQuery: TFDQuery;
+begin
+  Result := nil;
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'SELECT CODIGO, NOME, UF, CIDADE ' +
+                        'FROM CLIENTE ' +
+                        'WHERE CODIGO = :CODIGO';
+
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+    LQuery.Open;
+
+    if not LQuery.IsEmpty then
+    begin
+      Result := TCliente.Create;
+      Result.Codigo := LQuery.FieldByName('CODIGO').AsInteger;
+      Result.Nome   := LQuery.FieldByName('NOME').AsString;
+      Result.UF     := LQuery.FieldByName('UF').AsString;
+      Result.Cidade := LQuery.FieldByName('CIDADE').AsString;
+    end;
+
+  finally
+    LQuery.Free;
+  end;
+end;
+
+function TPedidoVendaRepository.BuscarProdutoPorCodigo(const ACodigo: Integer): TProduto;
+var
+  LQuery: TFDQuery;
+begin
+  Result := nil;
+
+  LQuery := GetQuery;
+  try
+    LQuery.SQL.Text := 'SELECT CODIGO, DESCRICAO, PRECOVENDA ' +
+                       'FROM PRODUTO ' +
+                       'WHERE CODIGO = :CODIGO';
+
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+    LQuery.Open;
+
+    if not LQuery.IsEmpty then
+    begin
+      Result := TProduto.Create;
+      Result.Codigo     := LQuery.FieldByName('CODIGO').AsInteger;
+      Result.Descricao  := LQuery.FieldByName('DESCRICAO').AsString;
+      Result.PrecoVenda := LQuery.FieldByName('PRECOVENDA').AsFloat;
+    end;
+
+  finally
+    LQuery.Free;
+  end;
+end;
+
+procedure TPedidoVendaRepository.SalvarNovoCliente(ACliente: TCliente);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := GetQuery;
+  try
+    LQuery.Close;
+
+    LQuery.SQL.Text := 'SELECT CODIGO FROM CLIENTE WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := ACliente.Codigo;
+    LQuery.Open;
+
+    if LQuery.IsEmpty then
+    begin
+      LQuery.Close;
+      LQuery.SQL.Text := 'INSERT INTO CLIENTE (CODIGO, NOME , UF, CIDADE) VALUES' +
+                         '(:CODIGO, :NOME, :UF, :CIDADE)';
+    end
+    else
+    begin
+      LQuery.Close;
+      LQuery.SQL.Text := 'UPDATE CLIENTE SET NOME = :NOME, UF = :UF,'+
+                         'CIDADE = :CIDADE  ' +
+                         'WHERE CODIGO = :CODIGO';
+    end;
+
+    LQuery.ParamByName('CODIGO').AsInteger := ACliente.Codigo;
+    LQuery.ParamByName('NOME').AsString := ACliente.Nome;
+    LQuery.ParamByName('UF').AsString := ACliente.UF;
+    LQuery.ParamByName('CIDADE').AssTRING := ACliente.Cidade;
+
+
+    LQuery.ExecSQL;
+  finally
+    ReleaseQuery(LQuery);
+  end;
+end;
+
+procedure TPedidoVendaRepository.SalvarNovoProduto(AProduto: TProduto);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := GetQuery;
+  try
+    LQuery.Close;
+
+    LQuery.SQL.Text := 'SELECT CODIGO FROM PRODUTO WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := AProduto.Codigo;
+    LQuery.Open;
+
+    if LQuery.IsEmpty then
+    begin
+      LQuery.Close;
+      LQuery.SQL.Text := 'INSERT INTO PRODUTO (CODIGO, DESCRICAO, PRECOVENDA) VALUES' +
+                         '(:CODIGO, :DESCRICAO, :PRECOVENDA)';
+    end
+    else
+    begin
+      LQuery.Close;
+      LQuery.SQL.Text := 'UPDATE PRODUTO SET DESCRICAO ='+
+                         ':DESCRICAO, PRECOVENDA = :PRECOVENDA ' +
+                         'WHERE CODIGO = :CODIGO';
+    end;
+
+    LQuery.ParamByName('CODIGO').AsInteger := AProduto.Codigo;
+    LQuery.ParamByName('DESCRICAO').AsString := AProduto.Descricao;
+    LQuery.ParamByName('PRECOVENDA').AsExtended := AProduto.PrecoVenda;
+
+    LQuery.ExecSQL;
+  finally
+    ReleaseQuery(LQuery);
+  end;
+end;
+
+procedure TPedidoVendaRepository.SalvarPedido(APedido: TPedido);
+var
+  LQuery: TFDQuery;
+  LItem: TPedidoItem;
+  LExiste: Boolean;
+begin
+  LQuery := GetQuery;
+
+  try
+    IniciarTransacao;
+
+    try
+      LExiste := PedidoExiste(APedido.NumeroPedido);
+
+      if not LExiste then
+      begin
+        LQuery.SQL.Text :=
+          'INSERT INTO PEDIDOVENDA (CODIGO, DATAEMISSAO, CODIGO_CLIENTE, VALORTOTAL) ' +
+          'VALUES (:CODIGO, :DATAEMISSAO, :CODIGO_CLIENTE, :VALORTOTAL)';
+      end
+      else
+      begin
+        LQuery.SQL.Text :=
+          'UPDATE PEDIDOVENDA SET DATAEMISSAO = :DATAEMISSAO, ' +
+          'CODIGO_CLIENTE = :CODIGO_CLIENTE, VALORTOTAL = :VALORTOTAL ' +
+          'WHERE CODIGO = :CODIGO';
+      end;
+
+      LQuery.ParamByName('CODIGO').AsInteger := APedido.NumeroPedido;
+      LQuery.ParamByName('DATAEMISSAO').AsDateTime := Now;
+      LQuery.ParamByName('CODIGO_CLIENTE').AsInteger := APedido.Cliente.Codigo;
+      LQuery.ParamByName('VALORTOTAL').AsExtended := APedido.ValorTotal;
+      LQuery.ExecSQL;
+
+      LQuery.SQL.Clear;
+
+      if LExiste then
+      begin
+        LQuery.SQL.Text := 'DELETE FROM PEDIDOITEM WHERE CODIGO_PEDIDOVENDA = :CODIGO';
+        LQuery.ParamByName('CODIGO').AsInteger := APedido.NumeroPedido;
+        LQuery.ExecSQL;
+      end;
+
+      LQuery.SQL.Clear;
+      LQuery.SQL.Text :=
+        'INSERT INTO PEDIDOITEM (CODIGO, CODIGO_PEDIDOVENDA, CODIGO_PRODUTO, QUANTIDADE, VALORUNITARIO, VALORTOTAL) ' +
+        'VALUES (:CODIGO, :CODIGO_PEDIDOVENDA, :CODIGO_PRODUTO, :QUANTIDADE, :VALORUNITARIO, :VALORTOTAL)';
+
+      for LItem in APedido.Itens do
+      begin
+        LQuery.ParamByName('CODIGO').AsInteger := LItem.Produto.Codigo;
+        LQuery.ParamByName('CODIGO_PEDIDOVENDA').AsInteger := APedido.NumeroPedido;
+        LQuery.ParamByName('CODIGO_PRODUTO').AsInteger := LItem.Produto.Codigo;
+        LQuery.ParamByName('QUANTIDADE').AsExtended := LItem.Quantidade;
+        LQuery.ParamByName('VALORUNITARIO').AsExtended := LItem.ValorUnitario;
+        LQuery.ParamByName('VALORTOTAL').AsExtended := LItem.ValorTotal;
+        LQuery.ExecSQL;
+      end;
+
+      ConfirmarTransacao;
+
+    except
+      on E: Exception do
+      begin
+        DesfazerTransacao;
+        raise Exception.Create('Erro ao inserir ou atualizar pedido: ' + E.Message);
+      end;
+    end;
+
+  finally
+    ReleaseQuery(LQuery);
+  end;
+end;
+end.

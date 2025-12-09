@@ -1,0 +1,15 @@
+object DataModule1: TDataModule1
+  Height = 162
+  Width = 330
+  PixelsPerInch = 120
+  object FDConnection1: TFDConnection
+    Params.Strings = (
+      'Par'#226'metro,Valor'
+      'Server,.\SQLEXPRESS01'
+      'Database,DB_PedidoVenda'
+      'OSAuthentication,True')
+    LoginPrompt = False
+    Left = 88
+    Top = 80
+  end
+end

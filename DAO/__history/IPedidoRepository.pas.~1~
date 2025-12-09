@@ -1,0 +1,27 @@
+unit IPedidoRepository;
+
+interface
+
+uses
+  UPedido, UCliente, UProduto; // Entidades que serão manipuladas
+
+type
+  // Interface para as operações de acesso a dados
+  IPedidoRepository = interface
+    ['{8E2E69F2-C5E0-44F4-A9D7-49772F2169B0}']
+
+    // Métodos de Transação (Gerenciados pelo TSQLConnection)
+    procedure IniciarTransacao;
+    procedure ConfirmarTransacao;
+    procedure DesfazerTransacao;
+
+    // Métodos de Consulta
+    function BuscarClientePorCodigo(const ACodigo: Integer): TCliente;
+    function BuscarProdutoPorCodigo(const ACodigo: Integer): TProduto;
+
+    // Método de Persistência
+    procedure SalvarPedido(APedido: TPedido);
+  end;
+
+implementation
+end.

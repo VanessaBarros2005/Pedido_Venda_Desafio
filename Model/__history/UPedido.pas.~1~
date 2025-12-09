@@ -1,0 +1,81 @@
+unit UPedido;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Classes,
+  UCliente,
+  UProduto;
+
+type
+  TPedidoItem = class
+  private
+    FProduto: TProduto;
+    FQuantidade: Extended;
+    FValorUnitario: Currency;
+    FValorTotal: Currency;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    property Produto: TProduto read FProduto write FProduto;
+    property Quantidade: Extended read FQuantidade write FQuantidade;
+    property ValorUnitario: Currency read FValorUnitario write FValorUnitario;
+    property ValorTotal: Currency read FValorTotal write FValorTotal;
+  end;
+
+  TPedidoItens = class(TObjectList<TPedidoItem>);
+
+  TPedido = class
+  private
+    FNumeroPedido: Integer;
+    FCliente: TCliente;
+    FDataEmissao: TDateTime;
+    FValorTotal: Currency;
+    FItens: TPedidoItens;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    property NumeroPedido: Integer read FNumeroPedido write FNumeroPedido;
+    property Cliente: TCliente read FCliente write FCliente;
+    property DataEmissao: TDateTime read FDataEmissao write FDataEmissao;
+    property ValorTotal: Currency read FValorTotal write FValorTotal;
+    property Itens: TPedidoItens read FItens; // Apenas leitura da coleção
+  end;
+
+implementation
+
+{ TPedidoItem }
+
+constructor TPedidoItem.Create;
+begin
+  inherited Create;
+end;
+
+destructor TPedidoItem.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{ TPedido }
+
+constructor TPedido.Create;
+const
+ ZEROVALUE = 0;
+begin
+  inherited Create;
+  FItens := TPedidoItens.Create(True);
+  FDataEmissao := Now;
+  FValorTotal := ZEROVALUE;
+end;
+
+destructor TPedido.Destroy;
+begin
+
+  FreeAndNil(FItens);
+  inherited Destroy;
+end;
+
+end.

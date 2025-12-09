@@ -1,0 +1,24 @@
+unit UPedidoVendaDesafio_View;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs;
+
+type
+  TUPedidoVenda_Vie = class(TForm)
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  UPedidoVenda_Vie: TUPedidoVenda_Vie;
+
+implementation
+
+{$R *.dfm}
+
+end.

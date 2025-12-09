@@ -1,0 +1,33 @@
+unit TPedidoVendaService;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Classes,
+  IPedidoVendaService,
+  IPedidoRepository,
+  UPedido, UCliente, UProduto;
+
+type
+  TPedidoVendaService = class(TInterfacedObject, IPedidoVendaService)
+  private
+    FRepository: IPedidoRepository;
+
+  public
+    constructor Create(ARepository: IPedidoRepository);
+  end;
+
+implementation
+
+{ TPedidoVendaService } // Comentário atualizado
+
+constructor TPedidoVendaService.Create(ARepository: IPedidoRepository);
+begin
+  inherited Create;
+  FRepository := ARepository;
+end;
+
+// ... (O restante da lógica de negócio permanece o mesmo)
+
+end.

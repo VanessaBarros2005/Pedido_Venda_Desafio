@@ -1,0 +1,403 @@
+﻿unit UPedidoVenda_View;
+
+interface
+
+uses
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Variants,
+  System.Classes,
+  System.UITypes,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
+  Vcl.Grids,
+  Vcl.ExtCtrls,
+  Vcl.Menus,
+  Vcl.ComCtrls,
+  UIPedidoVendaRepository,
+  UPedidoVendaRepository,
+  UIPedidoVendaService,
+  UPedidoVenda,
+  UCliente,
+  UProduto,
+  UViewCadastroRapido;
+
+const
+  VALOR_ZERADO = 0;
+  ZEROVALUE = 0.00;
+  VAZIO = '';
+  MSG_CODIGO_CLIENTE_INVALIDO = 'Código de cliente inválido.';
+  MSG_CLIENTE_ENCONTRADO = 'Cliente encontrado. Deseja Alterar o cadastro de %s?';
+  MSG_CLIENTE_NAO_ENCONTRADO = 'Cliente não encontrado. Deseja Cadastrá-lo agora?';
+  MSG_CODIGO_PRODUTO_NAO_ENCONTRADO = 'Produto não encontrado. Deseja Cadastrá-lo agora.';
+
+type
+  TUPedidoVenda_View = class(TForm)
+    imgFundo: TImage;
+    mnuPrincipal: TMainMenu;
+    mnuCadastro: TMenuItem;
+    mnuCadastroCliente: TMenuItem;
+    mnuCadastroProduto: TMenuItem;
+    edtCodCliente: TEdit;
+    lblNomeCliente: TLabel;
+    btnBuscarCliente: TButton;
+    lblCodCliente: TLabel;
+    lblCliente: TLabel;
+    edtCodProduto: TEdit;
+    edtQuantidade: TEdit;
+    btnAddItem: TButton;
+    lblCodProduto: TLabel;
+    lblQuantidade: TLabel;
+    lblNomeProduto: TLabel;
+    CarregarItens: TStringGrid;
+    lblTotal: TLabel;
+    lblValorTotal: TLabel;
+    btnSalvar: TButton;
+
+    procedure FormCreate(Sender: TObject);
+    procedure edtCodClienteKeyPress(Sender: TObject; var Key: Char);
+    procedure btnBuscarClienteClick(Sender: TObject);
+    procedure btnAddItemClick(Sender: TObject);
+    procedure btnSalvarClick(Sender: TObject);
+    procedure mnuCadastroClienteClick(Sender: TObject);
+    procedure mnuCadastroProdutoClick(Sender: TObject);
+    procedure edtCodProdutoKeyPress(Sender: TObject; var Key: Char);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure edtCodProdutoExit(Sender: TObject);
+
+  private
+    FPedido: TPedido;
+    FService: IPedidoVendaService;
+    FRepository: IPedidoVendaRepository;
+
+    procedure InicializarGrid;
+    procedure AtualizarTotal;
+    procedure ProcessarBuscaCliente;
+    procedure ProcessarBuscaProduto;
+    procedure AdicionarItemGrid(AProduto: TProduto; AQuantidade: Extended);
+    procedure SetupDependencies;
+
+  public
+    procedure ConfigurarService(AService: IPedidoVendaService);
+  end;
+
+implementation
+
+uses
+  UPedidoVendaDataModuleConexao,
+  UPedidoVendaService;
+
+{$R *.dfm}
+
+procedure TUPedidoVenda_View.ConfigurarService(AService: IPedidoVendaService);
+begin
+  FService := AService;
+end;
+
+procedure TUPedidoVenda_View.InicializarGrid;
+begin
+  CarregarItens.ColCount := 5;
+  CarregarItens.FixedRows := 1;
+  CarregarItens.Cells[0, 0] := 'Código';
+  CarregarItens.Cells[1, 0] := 'Produto';
+  CarregarItens.Cells[2, 0] := 'Qtde.';
+  CarregarItens.Cells[3, 0] := 'Vlr Unit.';
+  CarregarItens.Cells[4, 0] := 'Total';
+end;
+
+procedure TUPedidoVenda_View.SetupDependencies;
+begin
+  if not Assigned(UPedidoDesafioDataModuleConexao) then
+    UPedidoDesafioDataModuleConexao := TUPedidoDesafioDataModuleConexao.Create(Application);
+
+  if not UPedidoDesafioDataModuleConexao.ConexaoBanco.Connected then
+    UPedidoDesafioDataModuleConexao.ConexaoBanco.Connected := True;
+
+  FRepository := TPedidoVendaRepository.Create(UPedidoDesafioDataModuleConexao.ConexaoBanco);
+  FService := TPedidoVendaService.Create(FRepository);
+end;
+
+procedure TUPedidoVenda_View.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+end;
+
+procedure TUPedidoVenda_View.FormCreate(Sender: TObject);
+begin
+  FPedido := TPedido.Create;
+  InicializarGrid;
+  SetupDependencies;
+end;
+
+procedure TUPedidoVenda_View.FormDestroy(Sender: TObject);
+begin
+  FService := nil;
+  FRepository := nil;
+  FPedido.Free;
+end;
+
+procedure TUPedidoVenda_View.AtualizarTotal;
+begin
+  lblValorTotal.Caption := FormatCurr('R$ #,##0.00', FPedido.ValorTotal);
+end;
+
+procedure TUPedidoVenda_View.ProcessarBuscaCliente;
+var
+  LCodigo: Integer;
+  LCliente: TCliente;
+  LResultado: Integer;
+
+  function Msg(const ATitulo, ATexto: string): Integer;
+  var
+    LD: TForm;
+  begin
+    LD := CreateMessageDialog(ATexto, mtConfirmation, [mbYes, mbNo]);
+    LD.Caption := ATitulo;
+    Result := LD.ShowModal;
+    LD.Free;
+  end;
+
+begin
+  if not TryStrToInt(edtCodCliente.Text, LCodigo) or (LCodigo = ZERO_VALUE) then
+  begin
+    lblNomeCliente.Caption := VAZIO;
+    Exit;
+  end;
+
+  LCliente := FService.BuscarCliente(LCodigo);
+
+  if Assigned(LCliente) then
+  begin
+    if Assigned(FPedido.Cliente) then
+      FPedido.Cliente.Free;
+
+    FPedido.Cliente := LCliente;
+    lblNomeCliente.Caption := LCliente.Nome;
+
+    LResultado := Msg('Cliente Encontrado', Format(MSG_CLIENTE_ENCONTRADO, [LCliente.Nome]));
+
+    if LResultado = mrYes then
+    begin
+      TViewCadastroRapido.ExecutarCadastro(ocCliente, LCliente.Codigo, LCliente.Nome, 0, FService);
+      Exit;
+    end;
+
+    edtCodProduto.Enabled := True;
+    edtCodProduto.SetFocus;
+  end
+  else
+  begin
+    lblNomeCliente.Caption := VAZIO;
+
+    LResultado := Msg('Cadastro de Cliente', MSG_CLIENTE_NAO_ENCONTRADO);
+
+    if LResultado = mrYes then
+      TViewCadastroRapido.ExecutarCadastro(ocCliente, LCodigo, VAZIO, ZEROVALUE, FService)
+    else
+      edtCodCliente.SetFocus;
+  end;
+end;
+
+procedure TUPedidoVenda_View.ProcessarBuscaProduto;
+var
+  LCodigo: Integer;
+  LProduto: TProduto;
+  LResultado: Integer;
+
+  function Msg(const ATitulo, ATexto: string): Integer;
+  var
+    LD: TForm;
+  begin
+    LD := CreateMessageDialog(ATexto, mtConfirmation, [mbYes, mbNo]);
+    LD.Caption := ATitulo;
+    Result := LD.ShowModal;
+    LD.Free;
+  end;
+
+begin
+  if not TryStrToInt(edtCodProduto.Text, LCodigo) or (LCodigo = ZERO_VALUE) then
+  begin
+    lblNomeProduto.Caption := VAZIO;
+    Exit;
+  end;
+
+  LProduto := FService.BuscarProduto(LCodigo);
+  try
+    if Assigned(LProduto) then
+    begin
+      lblNomeProduto.Caption := LProduto.Descricao;
+      edtQuantidade.Enabled := True;
+      edtQuantidade.SetFocus;
+    end
+    else
+    begin
+      lblNomeProduto.Caption := VAZIO;
+
+      LResultado := Msg('Cadastro de Produto', MSG_CODIGO_PRODUTO_NAO_ENCONTRADO);
+
+      if LResultado = mrYes then
+        TViewCadastroRapido.ExecutarCadastro(ocProduto, LCodigo, VAZIO, ZERO_VALUE, FService)
+      else
+        edtCodProduto.SetFocus;
+    end;
+  finally
+    LProduto.Free;
+  end;
+end;
+
+procedure TUPedidoVenda_View.AdicionarItemGrid(AProduto: TProduto; AQuantidade: Extended);
+var
+  LRow: Integer;
+  LTotalItem: Currency;
+  LItem: TPedidoItem;
+  LItemExistente: TPedidoItem;
+  LRowExistente: Integer;
+begin
+  if not Assigned(AProduto) or (AQuantidade <= ZEROVALUE) then
+    Exit;
+
+  LItemExistente := nil;
+  LRowExistente := -1;
+
+  for LItem in FPedido.Itens do
+    if LItem.Produto.Codigo = AProduto.Codigo then
+    begin
+      LItemExistente := LItem;
+      Break;
+    end;
+
+  if Assigned(LItemExistente) then
+  begin
+    for LRow := 1 to CarregarItens.RowCount - 1 do
+      if StrToIntDef(CarregarItens.Cells[0, LRow], ZERO_VALUE) = AProduto.Codigo then
+      begin
+        LRowExistente := LRow;
+        Break;
+      end;
+
+    LItemExistente.Quantidade := LItemExistente.Quantidade + AQuantidade;
+    LItemExistente.ValorTotal := LItemExistente.Quantidade * LItemExistente.ValorUnitario;
+
+    if LRowExistente <> -1 then
+    begin
+      CarregarItens.Cells[2, LRowExistente] := FloatToStr(LItemExistente.Quantidade);
+      CarregarItens.Cells[4, LRowExistente] := CurrToStr(LItemExistente.ValorTotal);
+    end;
+  end
+  else
+  begin
+    LRow := CarregarItens.RowCount;
+    CarregarItens.RowCount := LRow + 1;
+
+    LTotalItem := AQuantidade * AProduto.PrecoVenda;
+
+    CarregarItens.Cells[0, LRow] := IntToStr(AProduto.Codigo);
+    CarregarItens.Cells[1, LRow] := AProduto.Descricao;
+    CarregarItens.Cells[2, LRow] := FloatToStr(AQuantidade);
+    CarregarItens.Cells[3, LRow] := CurrToStr(AProduto.PrecoVenda);
+    CarregarItens.Cells[4, LRow] := CurrToStr(LTotalItem);
+
+    LItem := TPedidoItem.Create;
+    LItem.Produto.CopiarDe(AProduto);
+    LItem.Quantidade := AQuantidade;
+    LItem.ValorUnitario := AProduto.PrecoVenda;
+    LItem.ValorTotal := LTotalItem;
+
+    FPedido.Itens.Add(LItem);
+  end;
+
+  FPedido.ValorTotal := ZEROVALUE;
+  for LItem in FPedido.Itens do
+    FPedido.ValorTotal := FPedido.ValorTotal + LItem.ValorTotal;
+
+  AtualizarTotal;
+
+  edtCodProduto.Clear;
+  edtQuantidade.Clear;
+  lblNomeProduto.Caption := VAZIO;
+end;
+
+procedure TUPedidoVenda_View.btnBuscarClienteClick(Sender: TObject);
+begin
+  ProcessarBuscaCliente;
+end;
+
+procedure TUPedidoVenda_View.edtCodClienteKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then
+  begin
+    Key := #0;
+    ProcessarBuscaCliente;
+  end;
+end;
+
+procedure TUPedidoVenda_View.edtCodProdutoExit(Sender: TObject);
+begin
+  if Trim(edtCodProduto.Text) <> VAZIO then
+    ProcessarBuscaProduto;
+end;
+
+procedure TUPedidoVenda_View.edtCodProdutoKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then
+  begin
+    Key := #0;
+    ProcessarBuscaProduto;
+  end;
+end;
+
+procedure TUPedidoVenda_View.btnAddItemClick(Sender: TObject);
+var
+  LCodigo: Integer;
+  LQuantidade: Extended;
+  LProduto: TProduto;
+begin
+  if not TryStrToInt(edtCodProduto.Text, LCodigo) or (LCodigo = VALOR_ZERADO) then
+    Exit;
+
+  if not TryStrToFloat(edtQuantidade.Text, LQuantidade) or (LQuantidade <= ZEROVALUE) then
+    Exit;
+
+  LProduto := FService.BuscarProduto(LCodigo);
+  try
+    if Assigned(LProduto) then
+      AdicionarItemGrid(LProduto, LQuantidade);
+  finally
+    LProduto.Free;
+  end;
+end;
+
+procedure TUPedidoVenda_View.btnSalvarClick(Sender: TObject);
+begin
+  if not Assigned(FPedido.Cliente) then
+    Exit;
+
+  if FPedido.Itens.Count = ZERO_VALUE then
+    Exit;
+
+  try
+    FService.Salvar(FPedido);
+    ShowMessage('Pedido salvo com sucesso! Total: ' + CurrToStr(FPedido.ValorTotal));
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar o pedido: ' + E.Message);
+  end;
+end;
+
+procedure TUPedidoVenda_View.mnuCadastroClienteClick(Sender: TObject);
+begin
+  TViewCadastroRapido.ExecutarCadastro(ocCliente, ZERO_VALUE, VAZIO, ZEROVALUE, FService);
+end;
+
+procedure TUPedidoVenda_View.mnuCadastroProdutoClick(Sender: TObject);
+begin
+  TViewCadastroRapido.ExecutarCadastro(ocProduto, ZERO_VALUE, VAZIO, ZEROVALUE, FService);
+end;
+
+end.
+

@@ -1,0 +1,28 @@
+unit UPedidoDesafioDataModuleConexao;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Classes,
+  Data.DB,
+  FireDAC.Comp.Client,
+  FireDAC.Comp.UI,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  FireDAC.VCLUI.Wait;
+
+type
+  TUPedidoDesafioDataModuleConexao = class(TDataModule)
+    ConexaoBanco: TFDConnection;
+    FDGUIxWaitCursor1: TFDGUIxWaitCursor;
+    FDPhysSQLiteDriverLink1: TFDPhysSQLiteDriverLink;
+  private
+  public
+  end;
+
+implementation
+
+{$R *.dfm}
+
+end.

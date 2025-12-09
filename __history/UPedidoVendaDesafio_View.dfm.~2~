@@ -1,0 +1,14 @@
+object UPedidoVenda_Vie: TUPedidoVenda_Vie
+  Left = 0
+  Top = 0
+  Caption = 'UPedidoVenda_Vie'
+  ClientHeight = 281
+  ClientWidth = 472
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  TextHeight = 15
+end

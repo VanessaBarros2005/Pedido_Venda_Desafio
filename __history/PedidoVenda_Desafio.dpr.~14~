@@ -1,0 +1,34 @@
+program PedidoVenda_Desafio;
+
+uses
+  Vcl.Forms,
+  UPedidoVendaDesafio_View in 'UPedidoVendaDesafio_View.pas',
+  UCliente in 'Model\UCliente.pas',
+  UProduto in 'Model\UProduto.pas',
+  UPedidoVenda in 'Model\UPedidoVenda.pas',
+  IPedidoVendaRepository in 'DAO\IPedidoVendaRepository.pas',
+  UPedidoVendaRepository in 'DAO\UPedidoVendaRepository.pas',
+  UIPedidoVendaService in 'Service\UIPedidoVendaService.pas',
+  UPedidoVendaService in 'Service\UPedidoVendaService.pas';
+
+{$R *.res}
+
+var
+  LRepository: IPedidoVendaRepository;
+  LService: UIPedidoVendaService;
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+
+  Application.CreateForm(TDataModuleConexao, DataModuleConexao);
+  LRepository := TPedidoRepository.Create(DataModuleConexao.SQLConnection);
+
+  LService := TPedidoVendaService.Create(LRepository);
+
+  Application.CreateForm(TUPedidoVendaDesafio_View, UPedidoVendaDesafio_View);
+
+  TUPedidoVendaDesafio_View(UPedidoVendaDesafio_View).SetService(LService);
+
+  Application.Run;
+end.

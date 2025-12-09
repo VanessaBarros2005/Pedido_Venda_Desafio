@@ -1,0 +1,47 @@
+unit UConstantes;
+
+interface
+
+const
+  ZERO_VALUE            = 0;
+  ZEROVALUE             = 0.00;
+  RETORNAR_MENOR_VALOR  = -1;
+  VAZIO                 = '';
+
+  // Mensagens gerais
+  MSG_OBRIGATORIO       = 'Preenchimento obrigatório.';
+  MSG_CONFIRMA_EXCLUSAO = 'Confirma a exclusão deste registro?';
+  MSG_EXCLUIDO_SUCESSO  = 'Excluído com sucesso!';
+
+  MSG_NOME_OBRIGATORIO = 'O campo Nome/Descri'#231#227'o ' + #233' obrigat'#243'rio.';
+  MSG_UF_OBRIGATORIA = 'Selecione a UF.';
+  MSG_CIDADE_OBRIGATORIA = 'Selecione a Cidade.';
+  MSG_CLIENTE_SALVO = 'Cliente salvo com sucesso!';
+  MSG_PRODUTO_SALVO = 'Produto salvo com sucesso!';
+
+  MSG_CONFIRMA_EXCLUSAO = 'Confirma a exclus'#227'o deste registro?';
+  MSG_EXCLUIDO_SUCESSO = 'Exclu'#237'do com sucesso!';
+
+
+  // Cliente
+  MSG_CODIGO_CLIENTE_INVALIDO = 'Código de cliente inválido.';
+  MSG_CLIENTE_ENCONTRADO      = 'Cliente encontrado. Deseja Alterar o cadastro de %s?';
+  MSG_CLIENTE_NAO_ENCONTRADO  = 'Cliente não encontrado. Deseja cadastrá-lo agora?';
+  MSG_CLIENTE_SALVO           = 'Cliente salvo com sucesso!';
+  MSG_UF_OBRIGATORIA          = 'Selecione a UF.';
+  MSG_CIDADE_OBRIGATORIA      = 'Selecione a Cidade.';
+
+  // Produto
+  MSG_CODIGO_PRODUTO_NAO_ENCONTRADO = 'Produto não encontrado. Deseja cadastrá-lo agora?';
+  MSG_PRODUTO_SALVO                 = 'Produto salvo com sucesso!';
+
+  // Pedido
+  MSG_PEDIDO_SEM_CLIENTE  = 'O pedido deve ter um cliente válido.';
+  MSG_PEDIDO_SEM_ITEM     = 'O pedido deve ter pelo menos um item.';
+  MSG_PEDIDO_SALVO        = 'Pedido salvo com sucesso!';
+  MSG_ERRO_SALVAR_PEDIDO  = 'Erro ao salvar o pedido: %s';
+
+implementation
+
+end.
+

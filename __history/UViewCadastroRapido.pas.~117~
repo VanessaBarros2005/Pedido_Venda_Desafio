@@ -1,0 +1,419 @@
+unit UViewCadastroRapido;
+
+interface
+
+uses
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Variants,
+  System.Classes,
+  System.UITypes,
+
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
+  Vcl.ExtCtrls,
+  Vcl.ComCtrls,
+
+  UCliente,
+  UProduto,
+  UIPedidoVendaService, Vcl.Mask;
+
+const
+  MSG_NOME_OBRIGATORIO = 'O campo Nome/Descri'#231#227'o ' + #233' obrigat'#243'rio.';
+  MSG_UF_OBRIGATORIA = 'Selecione a UF.';
+  MSG_CIDADE_OBRIGATORIA = 'Selecione a Cidade.';
+  MSG_CLIENTE_SALVO = 'Cliente salvo com sucesso!';
+  MSG_PRODUTO_SALVO = 'Produto salvo com sucesso!';
+  MSG_CONFIRMA_EXCLUSAO = 'Confirma a exclus'#227'o deste registro?';
+  MSG_EXCLUIDO_SUCESSO = 'Exclu'#237'do com sucesso!';
+  ZERO_VALUE = 0;
+  EM_BRANCO = '';
+
+type
+  TCadastroOpcoes = (ocCliente, ocProduto);
+
+type
+  TViewCadastroRapido = class(TForm)
+    pnlBotoes: TPanel;
+    btnExcluir: TButton;
+    btnSalvar: TButton;
+    btnCancelar: TButton;
+    pnlPrincipal: TPanel;
+    lblCodigo: TLabel;
+    lblNome: TLabel;
+    edtNome: TEdit;
+    lblValor: TLabel;
+    edtValor: TEdit;
+    lblUF: TLabel;
+    cmbUF: TComboBox;
+    lblCidade: TLabel;
+    cmbCidade: TComboBox;
+   edtCodigoNovo: TEdit;
+
+    procedure FormCreate(Sender: TObject);
+    procedure btnSalvarClick(Sender: TObject);
+    procedure btnCancelarClick(Sender: TObject);
+    procedure cmbUFChange(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure btnExcluirClick(Sender: TObject);
+    procedure edtCodigoNovoKeyPress(Sender: TObject; var Key: Char);
+    procedure edtCodigoNovoExit(Sender: TObject);
+  private
+    FService: IPedidoVendaService;
+    FCadastroOpcao: TCadastroOpcoes;
+    FRegistroID: Integer;
+
+    procedure ConfigurarCamposParaOpcao(AOpcao: TCadastroOpcoes);
+    procedure LimparCampos;
+    procedure CarregarUFCidade;
+    procedure SalvarCliente;
+    procedure SalvarProduto;
+  public
+    class procedure ExecutarCadastro(AOpcao: TCadastroOpcoes; AID: Integer; ANome: string; AValor: Currency; AService: IPedidoVendaService);
+  end;
+
+implementation
+
+{$R *.dfm}
+
+class procedure TViewCadastroRapido.ExecutarCadastro(AOpcao: TCadastroOpcoes; AID: Integer; ANome: string; AValor: Currency; AService: IPedidoVendaService);
+var
+  LView: TViewCadastroRapido;
+  LCliente: TCliente;
+  LCidades: TStringList;
+begin
+  LView := TViewCadastroRapido.Create(Application);
+  try
+    LView.FService := AService;
+    LView.FRegistroID := AID;
+    LView.FCadastroOpcao := AOpcao;
+
+    LView.ConfigurarCamposParaOpcao(AOpcao);
+
+    LView.edtCodigoNovo.Text := IntToStr(AID);
+    LView.edtNome.Text := ANome;
+
+    if AOpcao = ocCliente then
+    begin
+      LView.CarregarUFCidade;
+
+      if (AID > ZERO_VALUE) then
+      begin
+        LCliente := AService.BuscarCliente(AID);
+        try
+          if Assigned(LCliente) then
+          begin
+            LView.edtCodigoNovo.Text := IntToStr(LCliente.Codigo);
+            LView.edtNome.Text := Trim(LCliente.Nome);
+
+
+             LView.cmbUF.ItemIndex :=
+               LView.cmbUF.Items.IndexOf(Trim(LCliente.UF));
+
+            if LView.cmbUF.ItemIndex <> -1 then
+            begin
+              LCidades := AService.CarregarCidadesPorUF(LCliente.UF);
+              try
+                LView.cmbCidade.Items.Clear;
+                LView.cmbCidade.Items.AddStrings(LCidades);
+              finally
+                LCidades.Free;
+              end;
+
+              LView.cmbCidade.ItemIndex :=
+                LView.cmbCidade.Items.IndexOf(Trim(LCliente.Cidade));
+            end;
+          end;
+        finally
+          LCliente.Free;
+        end;
+      end
+      else
+      begin
+        LView.cmbUF.ItemIndex := -1;
+        LView.cmbCidade.Clear;
+      end;
+    end;
+
+    LView.ShowModal;
+  finally
+    LView.Free;
+  end;
+end;
+
+procedure TViewCadastroRapido.FormCreate(Sender: TObject);
+begin
+  BorderStyle := bsDialog;
+end;
+
+procedure TViewCadastroRapido.FormShow(Sender: TObject);
+begin
+  edtNome.ReadOnly := False;
+  edtValor.ReadOnly := False;
+  cmbUF.Enabled := True;
+  cmbCidade.Enabled := True;
+  edtCodigoNovo.SetFocus;
+end;
+
+procedure TViewCadastroRapido.LimparCampos;
+begin
+  edtCodigoNovo.Clear;
+  edtNome.Clear;
+  edtValor.Clear;
+  cmbUF.ItemIndex := -1;
+  cmbCidade.ItemIndex := -1;
+end;
+
+procedure TViewCadastroRapido.CarregarUFCidade;
+var
+  LUFs: TStringList;
+begin
+  cmbUF.Clear;
+  cmbCidade.Clear;
+
+  if not Assigned(FService) then
+    Exit;
+
+  LUFs := FService.CarregarUFs;
+  try
+    cmbUF.Items.BeginUpdate;
+    try
+      cmbUF.Items.Clear;
+      cmbUF.Items.AddStrings(LUFs);
+    finally
+      cmbUF.Items.EndUpdate;
+    end;
+  finally
+    LUFs.Free;
+  end;
+
+  cmbUF.ItemIndex := -1;
+end;
+
+procedure TViewCadastroRapido.cmbUFChange(Sender: TObject);
+var
+  LCidades: TStringList;
+begin
+  cmbCidade.Clear;
+
+  if (cmbUF.ItemIndex = -1) or not Assigned(FService) then
+    Exit;
+
+  LCidades := FService.CarregarCidadesPorUF(cmbUF.Text);
+  try
+    cmbCidade.Items.BeginUpdate;
+    try
+      cmbCidade.Items.Clear;
+      cmbCidade.Items.AddStrings(LCidades);
+    finally
+      cmbCidade.Items.EndUpdate;
+    end;
+  finally
+    LCidades.Free;
+  end;
+
+  cmbCidade.ItemIndex := -1;
+end;
+
+procedure TViewCadastroRapido.ConfigurarCamposParaOpcao(AOpcao: TCadastroOpcoes);
+const
+  ALTURA_CLIENTE = 300;
+  ALTURA_FUNDO = 255;
+
+  POS_UF_LEFT = 18;
+  POS_UF_TOP  = 130;
+
+  POS_CIDADE_LEFT = 18;
+  POS_CIDADE_TOP  = 180;
+
+  POS_CIDADE_TOP_LABEL  = 110;
+
+  POS_VALOR_LEFT = 18;
+  POS_VALOR_TOP  = 80;
+  POS_VALOR_TOP_LABEL = 110;
+  POS_VALOR_TOP_COMBO= 140;
+begin
+  FCadastroOpcao := AOpcao;
+
+  btnExcluir.Visible := FRegistroID > ZERO_VALUE;
+
+  if AOpcao = ocCliente then
+  begin
+    Caption := 'Cadastro Rápido de Cliente';
+
+    lblValor.Visible := False;
+    edtValor.Visible := False;
+
+    lblUF.Visible := True;
+    cmbUF.Visible := True;
+    lblCidade.Visible := True;
+    cmbCidade.Visible := True;
+
+    lblUF.Left := POS_UF_LEFT;
+    lblUF.Top  := POS_CIDADE_TOP_LABEL ;
+    cmbUF.Left := POS_UF_LEFT;
+    cmbUF.Top  := POS_UF_TOP;
+    lblCidade.Left := POS_CIDADE_LEFT;
+    lblCidade.Top  := POS_CIDADE_TOP - 18;
+    cmbCidade.Left := POS_CIDADE_LEFT;
+    cmbCidade.Top  := POS_CIDADE_TOP;
+
+    ClientHeight := ALTURA_CLIENTE;
+
+  end
+  else
+  begin
+    Caption := 'Cadastro Rápido de Produto';
+    lblValor.Visible := True;
+    edtValor.Visible := True;
+
+    lblValor.Left := POS_VALOR_LEFT;
+    lblValor.Top  :=  POS_VALOR_TOP_LABEL;
+    edtValor.Left := POS_VALOR_LEFT;
+    edtValor.Top  :=  POS_VALOR_TOP_COMBO;
+
+    lblUF.Visible := False;
+    cmbUF.Visible := False;
+    lblCidade.Visible := False;
+    cmbCidade.Visible := False;
+
+    ClientHeight := ALTURA_CLIENTE;
+  end;
+end;
+
+procedure TViewCadastroRapido.edtCodigoNovoExit(Sender: TObject);
+begin
+  if Trim(edtCodigoNovo.Text) = EM_BRANCO then
+  begin
+    ShowMessage('Código obrigatório.');
+    edtCodigoNovo.SetFocus;
+    Exit;
+  end;
+
+  edtNome.SetFocus;
+end;
+
+procedure TViewCadastroRapido.edtCodigoNovoKeyPress(Sender: TObject;var Key: Char);
+begin
+  if Key = #13 then
+  begin
+    Key := #0;
+    edtNome.SetFocus;
+  end;
+end;
+
+procedure TViewCadastroRapido.SalvarCliente;
+var
+  LCliente: TCliente;
+  LExiste: TCliente;
+begin
+  LCliente := TCliente.Create;
+  LExiste := nil;
+  try
+    LCliente.Codigo := StrToIntDef(edtCodigoNovo.Text, ZERO_VALUE);
+    LCliente.Nome := edtNome.Text;
+    LCliente.UF := cmbUF.Text;
+    LCliente.Cidade := cmbCidade.Text;
+
+    LExiste := FService.BuscarCliente(LCliente.Codigo);
+
+    if LExiste = nil then
+      FService.SalvarNovoCliente(LCliente)
+    else
+      FService.AtualizarCliente(LCliente);
+
+    ShowMessage(MSG_CLIENTE_SALVO);
+    ModalResult := mrOk;
+  finally
+    LCliente.Free;
+    if Assigned(LExiste) then
+      LExiste.Free;
+  end;
+end;
+
+procedure TViewCadastroRapido.SalvarProduto;
+var
+  LProduto: TProduto;
+  LExiste: TProduto;
+begin
+  LProduto := TProduto.Create;
+   LExiste := nil;
+  try
+    LProduto.Codigo := StrToIntDef(edtCodigoNovo.Text, ZERO_VALUE);
+    LProduto.Descricao := edtNome.Text;
+    LProduto.PrecoVenda := StrToCurrDef(edtValor.Text, ZERO_VALUE);
+
+    LExiste := FService.BuscarProduto(LProduto.Codigo);
+
+    if LExiste = nil then
+      FService.SalvarNovoProduto(LProduto)
+    else
+      FService.AtualizarProduto(LProduto);
+
+    ShowMessage(MSG_PRODUTO_SALVO);
+    ModalResult := mrOk;
+  finally
+    LProduto.Free;
+    if Assigned(LExiste) then
+      LExiste.Free;
+  end;
+end;
+
+procedure TViewCadastroRapido.btnSalvarClick(Sender: TObject);
+begin
+  if edtNome.Text = EM_BRANCO then
+  begin
+    ShowMessage(MSG_NOME_OBRIGATORIO);
+    edtNome.SetFocus;
+    Exit;
+  end;
+
+  if FCadastroOpcao = ocCliente then
+  begin
+    if cmbUF.ItemIndex = -1 then
+    begin
+      ShowMessage(MSG_UF_OBRIGATORIA);
+      cmbUF.SetFocus;
+      Exit;
+    end;
+    if cmbCidade.ItemIndex = -1 then
+    begin
+      ShowMessage(MSG_CIDADE_OBRIGATORIA);
+      cmbCidade.SetFocus;
+      Exit;
+    end;
+    SalvarCliente;
+  end
+  else
+    SalvarProduto;
+end;
+
+procedure TViewCadastroRapido.btnCancelarClick(Sender: TObject);
+begin
+  ModalResult := mrCancel;
+  LimparCampos;
+end;
+
+procedure TViewCadastroRapido.btnExcluirClick(Sender: TObject);
+begin
+  if FRegistroID > ZERO_VALUE then
+  begin
+    if MessageDlg(MSG_CONFIRMA_EXCLUSAO, mtConfirmation, [mbYes, mbNo], ZERO_VALUE) = mrYes then
+    begin
+      if FCadastroOpcao = ocCliente then
+        FService.ExcluirCliente(FRegistroID)
+      else
+        FService.ExcluirProduto(FRegistroID);
+
+      ShowMessage(MSG_EXCLUIDO_SUCESSO);
+      ModalResult := mrOk;
+    end;
+  end;
+end;
+
+end.
+

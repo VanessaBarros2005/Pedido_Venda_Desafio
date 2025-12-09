@@ -1,0 +1,24 @@
+unit IPedidoVendaRepository;
+
+interface
+
+uses
+  UPedido,
+  UCliente,
+  UProduto;
+
+type
+  IPedidoVendaRepository = interface
+  ['{5715D6A9-AF61-4920-B4B3-1FBA8B9ADC3C}']
+
+    procedure IniciarTransacao;
+    procedure ConfirmarTransacao;
+    procedure DesfazerTransacao;
+
+    function BuscarClientePorCodigo(const ACodigo: Integer): TCliente;
+    function BuscarProdutoPorCodigo(const ACodigo: Integer): TProduto;
+    procedure SalvarPedido(APedido: TPedido);
+  end;
+
+implementation
+end.

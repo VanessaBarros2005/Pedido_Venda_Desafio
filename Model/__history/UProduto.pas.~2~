@@ -1,0 +1,33 @@
+unit UProduto;
+
+interface
+
+uses
+  System.SysUtils;
+
+type
+  TProduto = class
+  private
+    FCodigo: Integer;
+    FDescricao: string;
+    FPrecoVenda: Currency;
+  public
+    procedure Assign(Source: TProduto);
+
+    property Codigo: Integer read FCodigo write FCodigo;
+    property Descricao: string read FDescricao write FDescricao;
+    property PrecoVenda: Currency read FPrecoVenda write FPrecoVenda;
+  end;
+
+implementation
+
+procedure TProduto.Assign(Source: TProduto);
+begin
+  if Source = nil then Exit;
+  FCodigo := Source.Codigo;
+  FDescricao := Source.Descricao;
+  FPrecoVenda := Source.PrecoVenda;
+end;
+
+end.
+

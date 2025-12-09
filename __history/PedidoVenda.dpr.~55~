@@ -1,0 +1,36 @@
+program PedidoVenda;
+
+uses
+  Vcl.Forms,
+  UPedidoVenda_View in 'View\UPedidoVenda_View.pas',
+  UViewCadastroRapido in 'View\UViewCadastroRapido.pas',
+  UCliente in 'Model\UCliente.pas',
+  UProduto in 'Model\UProduto.pas',
+  UPedidoVenda in 'Model\UPedidoVenda.pas',
+  UIPedidoVendaService in 'Service\UIPedidoVendaService.pas',
+  UPedidoVendaService in 'Service\UPedidoVendaService.pas',
+  UIPedidoVendaRepository in 'DAO\UIPedidoVendaRepository.pas',
+  UPedidoVendaRepository in 'DAO\UPedidoVendaRepository.pas',
+  UPedidoVendaDataModuleConexao in 'DAO\UPedidoVendaDataModuleConexao.pas',
+  UConstantes in 'Util\UConstantes.pas';
+{$R *.res}
+
+var
+  LRepository: IPedidoVendaRepository;
+  LService: IPedidoVendaService;
+  DMConexao:  TUPedidoDesafioDataModuleConexao;
+  LView: TUPedidoVenda_View;
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+
+  Application.CreateForm(TUPedidoDesafioDataModuleConexao, DMConexao);
+  LRepository := TPedidoVendaRepository.Create(DMConexao.ConexaoBanco);
+  LService := TPedidoVendaService.Create(LRepository);
+
+  Application.CreateForm(TUPedidoVenda_View, LView);
+  LView.ConfigurarService(LService);
+
+  Application.Run;
+end.

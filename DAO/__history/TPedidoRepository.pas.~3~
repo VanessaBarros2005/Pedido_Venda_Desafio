@@ -1,0 +1,145 @@
+unit UPedidoRepository;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.SqlDB, Data.DB,
+  IPedidoRepository, UPedido, UCliente, UProduto;
+
+type
+  TPedidoRepository = class(TInterfacedObject, IPedidoRepository)
+  private
+    FConnection: TSQLConnection;
+    function ObterProximoNumeroPedido: Integer;
+
+  public
+    constructor Create(AConnection: TSQLConnection);
+
+    procedure IniciarTransacao;
+    procedure ConfirmarTransacao;
+    procedure DesfazerTransacao;
+
+    function BuscarClientePorCodigo(const ACodigo: Integer): TCliente;
+    function BuscarProdutoPorCodigo(const ACodigo: Integer): TProduto;
+    procedure SalvarPedido(APedido: TPedido);
+  end;
+
+implementation
+
+uses
+  Data.SqlExpr;
+
+{ TPedidoRepository }
+
+constructor TPedidoRepository.Create(AConnection: TSQLConnection);
+begin
+  inherited Create;
+  FConnection := AConnection;
+end;
+
+procedure TPedidoRepository.IniciarTransacao;
+begin
+  FConnection.StartTransaction;
+end;
+
+procedure TPedidoRepository.ConfirmarTransacao;
+begin
+  FConnection.Commit;
+end;
+
+procedure TPedidoRepository.DesfazerTransacao;
+begin
+  FConnection.Rollback;
+end;
+
+function TPedidoRepository.BuscarClientePorCodigo(const ACodigo: Integer): TCliente;
+var
+  LQuery: TSQLQuery;
+begin
+  LQuery := TSQLQuery.Create(nil);
+  Result := nil;
+
+  try
+    LQuery.SQLConnection := FConnection;
+    LQuery.SQL.Text := 'SELECT NOME, CIDADE, UF FROM CLIENTE WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+
+    LQuery.Open;
+
+    if not LQuery.IsEmpty then
+    begin
+      Result := TCliente.Create;
+      Result.Codigo := ACodigo;
+      Result.Nome := LQuery.FieldByName('NOME').AsString;
+      Result.Cidade := LQuery.FieldByName('CIDADE').AsString;
+      Result.UF := LQuery.FieldByName('UF').AsString;
+    end;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+function TPedidoRepository.BuscarProdutoPorCodigo(const ACodigo: Integer): TProduto;
+var
+  LQuery: TSQLQuery;
+begin
+  LQuery := TSQLQuery.Create(nil);
+  Result := nil;
+
+  try
+    LQuery.SQLConnection := FConnection;
+    LQuery.SQL.Text := 'SELECT DESCRICAO, PRECO_VENDA FROM PRODUTO WHERE CODIGO = :CODIGO';
+    LQuery.ParamByName('CODIGO').AsInteger := ACodigo;
+
+    LQuery.Open;
+
+    if not LQuery.IsEmpty then
+    begin
+      Result := TProduto.Create;
+      Result.Codigo := ACodigo;
+      Result.Descricao := LQuery.FieldByName('DESCRICAO').AsString;
+      Result.PrecoVenda := LQuery.FieldByName('PRECO_VENDA').AsCurrency;
+    end;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+function TPedidoRepository.ObterProximoNumeroPedido: Integer;
+var
+  LQuery: TSQLQuery;
+begin
+  LQuery := TSQLQuery.Create(nil);
+  try
+    LQuery.SQLConnection := FConnection;
+    LQuery.SQL.Text := 'SELECT ISNULL(MAX(NUMERO_PEDIDO), 0) + 1 AS NOVO_NUMERO FROM PEDIDO';
+    LQuery.Open;
+    Result := LQuery.FieldByName('NOVO_NUMERO').AsInteger;
+  finally
+    LQuery.Free;
+  end;
+end;
+
+procedure TPedidoRepository.SalvarPedido(APedido: TPedido);
+var
+  LQuery: TSQLQuery;
+  LItem: TPedidoItem;
+  LNumeroPedido: Integer;
+begin
+  IniciarTransacao;
+  LQuery := TSQLQuery.Create(nil);
+
+  try
+    LQuery.SQLConnection := FConnection;
+
+    if APedido.NumeroPedido = 0 then
+      LNumeroPedido := ObterProximoNumeroPedido
+    else
+      LNumeroPedido := APedido.NumeroPedido;
+
+    LQuery.SQL.Text := 'INSERT INTO PEDIDO (NUMERO_PEDIDO, DATA_EMISSAO, CODIGO_CLIENTE, VALOR_TOTAL) ' +
+                       'VALUES (:NUMERO, :DATA, :CLIENTE, :TOTAL)';
+
+    LQuery.ParamByName('NUMERO').AsInteger := LNumeroPedido;
+    LQuery.ParamByName('DATA').AsDateTime := Now;
+    LQuery.ParamByName('CLIENTE').

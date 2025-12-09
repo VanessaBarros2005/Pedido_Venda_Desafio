@@ -1,0 +1,23 @@
+unit IPedidoVendaDesafioService;
+
+interface
+
+uses
+  UPedido,
+  UCliente,
+  UProduto;
+
+type
+  IPedidoVendaDesafioService = interface
+  ['{DB2627D5-B0B1-4751-98DC-C66D642FBE0D}']
+
+    procedure CalcularTotalPedido(APedido: TPedido);
+    procedure AdicionarItem(APedido: TPedido; AProduto: TProduto; AQuantidade: Extended);
+
+    function BuscarCliente(const ACodigo: Integer): TCliente;
+    function BuscarProduto(const ACodigo: Integer): TProduto;
+    procedure Salvar(APedido: TPedido);
+  end;
+
+implementation
+end.

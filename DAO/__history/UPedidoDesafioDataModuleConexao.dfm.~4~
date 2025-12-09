@@ -1,0 +1,12 @@
+object DataModule1: TDataModule1
+  Height = 150
+  Width = 264
+  PixelsPerInch = 120
+  object ConexaoBanco: TFDConnection
+    Params.Strings = (
+      'DriverID=SQLite'
+      'Database = PedidoVenda.db')
+    Left = 104
+    Top = 40
+  end
+end
