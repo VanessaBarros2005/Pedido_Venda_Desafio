@@ -1,0 +1,169 @@
+PRAGMA foreign_keys = ON;
+
+------------------------------------------------------------
+-- APAGA AS TABELAS SE EXISTIREM -- :(
+------------------------------------------------------------
+DROP TABLE IF EXISTS PEDIDOITEM;
+DROP TABLE IF EXISTS PEDIDOVENDA;
+DROP TABLE IF EXISTS CLIENTE;
+DROP TABLE IF EXISTS PRODUTO;
+DROP TABLE IF EXISTS CIDADE;
+DROP TABLE IF EXISTS ESTADO;
+
+------------------------------------------------------------
+-- TABELA ESTADO
+------------------------------------------------------------
+CREATE TABLE ESTADO (
+    UF   CHAR(2) PRIMARY KEY,
+    NOME VARCHAR(100) NOT NULL
+);
+
+------------------------------------------------------------
+-- TABELA CIDADE
+------------------------------------------------------------
+CREATE TABLE CIDADE (
+    ID    INTEGER PRIMARY KEY AUTOINCREMENT,
+    NOME  VARCHAR(100) NOT NULL,
+    UF    CHAR(2) NOT NULL,
+    FOREIGN KEY (UF) REFERENCES ESTADO(UF) ON DELETE CASCADE
+);
+
+------------------------------------------------------------
+-- TABELA CLIENTE TODOS COM DELETE CASCADE :)
+------------------------------------------------------------
+CREATE TABLE CLIENTE (
+    CODIGO INTEGER PRIMARY KEY,
+    NOME   VARCHAR(100) NOT NULL,
+    UF     CHAR(2) NOT NULL,
+    CIDADE VARCHAR(100) NOT NULL,
+    FOREIGN KEY (UF) REFERENCES ESTADO(UF) ON DELETE CASCADE
+);
+
+------------------------------------------------------------
+-- TABELA PRODUTO
+------------------------------------------------------------
+CREATE TABLE PRODUTO (
+    CODIGO      INTEGER PRIMARY KEY,
+    DESCRICAO   VARCHAR(200) NOT NULL,
+    PRECOVENDA  NUMERIC(10,2) NOT NULL
+);
+
+------------------------------------------------------------
+-- TABELA PEDIDOVENDA
+------------------------------------------------------------
+CREATE TABLE PEDIDOVENDA (
+    CODIGO          INTEGER PRIMARY KEY,
+    DATAEMISSAO     DATETIME NOT NULL,
+    CODIGO_CLIENTE  INTEGER NOT NULL,
+    VALORTOTAL      NUMERIC(10,2) NOT NULL,
+
+    FOREIGN KEY (CODIGO_CLIENTE) REFERENCES CLIENTE(CODIGO)
+        ON DELETE CASCADE
+);
+
+------------------------------------------------------------
+-- TABELA PEDIDOITEM
+------------------------------------------------------------
+CREATE TABLE PEDIDOITEM (
+    ID                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    CODIGO_PEDIDOVENDA  INTEGER NOT NULL,
+    CODIGO_PRODUTO      INTEGER NOT NULL,
+    QUANTIDADE          NUMERIC(10,3) NOT NULL,
+    VALORUNITARIO       NUMERIC(10,2) NOT NULL,
+    VALORTOTAL          NUMERIC(10,2) NOT NULL,
+
+    FOREIGN KEY (CODIGO_PEDIDOVENDA) REFERENCES PEDIDOVENDA(CODIGO)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (CODIGO_PRODUTO) REFERENCES PRODUTO(CODIGO)
+        ON DELETE CASCADE
+);
+
+------------------------------------------------------------
+-- INSERT TODOS OS ESTADOS :)
+------------------------------------------------------------
+INSERT INTO ESTADO (UF, NOME) VALUES
+('AC','Acre'),
+('AL','Alagoas'),
+('AP','Amapá'),
+('AM','Amazonas'),
+('BA','Bahia'),
+('CE','Ceará'),
+('DF','Distrito Federal'),
+('ES','Espírito Santo'),
+('GO','Goiás'),
+('MA','Maranhão'),
+('MT','Mato Grosso'),
+('MS','Mato Grosso do Sul'),
+('MG','Minas Gerais'),
+('PA','Pará'),
+('PB','Paraíba'),
+('PR','Paraná'),
+('PE','Pernambuco'),
+('PI','Piauí'),
+('RJ','Rio de Janeiro'),
+('RN','Rio Grande do Norte'),
+('RS','Rio Grande do Sul'),
+('RO','Rondônia'),
+('RR','Roraima'),
+('SC','Santa Catarina'),
+('SP','São Paulo'),
+('SE','Sergipe'),
+('TO','Tocantins');
+
+------------------------------------------------------------
+-- INSERIR ALGUMAS CIDADES :)
+------------------------------------------------------------
+INSERT INTO CIDADE (NOME, UF) VALUES
+-- São Paulo
+('São Paulo','SP'),
+('Campinas','SP'),
+('Santos','SP'),
+('Ribeirão Preto','SP'),
+
+-- Rio de Janeiro
+('Rio de Janeiro','RJ'),
+('Niterói','RJ'),
+('Campos dos Goytacazes','RJ'),
+
+-- Minas Gerais
+('Belo Horizonte','MG'),
+('Uberlândia','MG'),
+('Contagem','MG'),
+
+-- Paraná
+('Curitiba','PR'),
+('Londrina','PR'),
+('Maringá','PR'),
+
+-- Rio Grande do Sul
+('Porto Alegre','RS'),
+('Caxias do Sul','RS'),
+('Pelotas','RS'),
+
+-- Santa Catarina
+('Florianópolis','SC'),
+('Joinville','SC'),
+('Blumenau','SC'),
+
+-- Bahia
+('Salvador','BA'),
+('Feira de Santana','BA'),
+('Vitória da Conquista','BA'),
+
+-- Pernambuco
+('Recife','PE'),
+('Olinda','PE'),
+('Petrolina','PE'),
+
+-- Ceará
+('Fortaleza','CE'),
+('Caucaia','CE'),
+('Juazeiro do Norte','CE'),
+
+-- Pará
+('Belém','PA'),
+('Ananindeua','PA'),
+('Marabá','PA');
+
+-----------------END---------------
